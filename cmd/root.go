@@ -23,6 +23,7 @@ import (
 )
 
 var cfgFile string
+var profile string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -60,7 +61,10 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
 	RootCmd.AddCommand(createUserCmd)
+	RootCmd.PersistentFlags().StringVar(&profile, "profile", "", "AWS profile to set credentials from your ~/.aws/credentials file")
+	//	createUserCmd.Flags().StringVar(&profile, "profile", "", "AWS profile to set credentials from your ~/.aws/credentials file")
 }
 
 // initConfig reads in config file and ENV variables if set.

@@ -3,30 +3,43 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/grindrllc/singapura/singapura"
 	"github.com/spf13/cobra"
 )
 
 var createUserCmd = &cobra.Command{
-	Use:   "createUser",
+	Use:   "CreateUser",
 	Short: "Create a new AWS User",
-	Long:  `Create a new AWS User - username, path`,
+	Long:  `Create a new AWS User - username`,
 	Run: func(cmd *cobra.Command, args []string) {
-		//Need a --profile flag in order to get credentials other than default
-		if len(args) < 1 {
-			fmt.Println("Imma need a username doofus")
+		var i *singapura.IAM
+		var err error
+		username := args[0]
+		if username == "" {
+			fmt.Println("Provide a username to create account.")
 			return
 		}
-		i := singapura.IamInstance()
-		u := &iam.CreateUserInput{
-			UserName: aws.String(args[0]),
-		}
-		res, err := i.CreateUserRequest(u)
+		i, err = singapura.IamInstance(profile)
+
+		var userRes *iam.CreateUserOutput
+		userRes, err = i.CreateUser(&username)
+
+		var loginRes *iam.CreateLoginProfileOutput
+		loginRes, err = i.CreateUserPassword(&username)
 		if err != nil {
-			fmt.Println("Error creating user: %v\n", err)
+			fmt.Printf("Error creating user: %v\n", err)
+			return
 		}
-		fmt.Printf("Response from creating user: %v\n", res)
+		fmt.Printf("User res: %v\n", userRes)
+		fmt.Printf("Login res: %v\n", loginRes)
+	},
+}
+
+var deleteUserCmd = &cobra.Command{
+	Use:   "DeleteUser",
+	Short: "Delete an AWS User",
+	Long:  `Delete an AWS User - username`,
+	Run: func(cmd *cobra.Command, args []string) {
 	},
 }
