@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/grindrllc/singapura/singapura"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -51,6 +52,7 @@ func Execute() {
 }
 
 func init() {
+	singapura.RoleByNameAndEnv(&singapura.GroupConfig{})
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.

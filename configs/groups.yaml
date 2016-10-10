@@ -1,0 +1,15 @@
+groups:
+  preprod:
+    developer:
+      - "Developers"
+    devops:
+      - "devops"
+      - "DevOps-NOC-Dynamo-Ec2"
+      - "DevOps-NOC-ElasticCache-Route53"
+      - "DevOps-NOC-NOC-SUPPORT-DASHBOARD"
+      - "DevOPS-ReadOnly-Cloudwatch-Opsworks"
+      - "MFA_ENFORCED"
+      - "DevOps-NOC-EBS-VPC"
+      - "DevOps-NOC-CloudFormation-Cloudfront"
+      - "Grindr-ADMIN-ALL-ACCESS-PLAN-fixed-ma-03052016"
+      - "DevOps-SNS-SQS"

@@ -2,6 +2,10 @@ package singapura
 
 import (
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
+
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -15,9 +19,28 @@ type IAM struct {
 	sess *session.Session
 }
 
-const passwordLen = 10
+type GroupConfig struct {
+	Role string
+	Env  string
+}
 
-//IamInstance creates an instance of a Iam Client with the default ~/.aws/credentials
+type EnvRoles struct {
+	//	Groups map[string]map[string][]string
+	Envs map[string]Env
+}
+
+type Env struct {
+	Roles map[string][]string
+}
+
+const (
+	passwordLen    = 10
+	defaultEnv     = "preprod"
+	defaultRole    = "developer"
+	groupsFileName = "configs/groups.yaml"
+)
+
+// IamInstance creates an instance of a Iam Client with the default ~/.aws/credentials
 func IamInstance(profile string) (*IAM, error) {
 	sess, err := awsSession(profile)
 	if err != nil {
@@ -30,6 +53,8 @@ func IamInstance(profile string) (*IAM, error) {
 	return i, nil
 }
 
+// awsSession creates an AWS session. If there is a profile passed in, it'll create a session
+// with that option. Otherwise, it defaults to the default in ~/.aws/credentials
 func awsSession(profile string) (*session.Session, error) {
 	var opts session.Options
 	var sess *session.Session
@@ -48,6 +73,7 @@ func awsSession(profile string) (*session.Session, error) {
 	return sess, nil
 }
 
+// CreateUser creates a user with the specified username
 func (i *IAM) CreateUser(username *string) (*iam.CreateUserOutput, error) {
 	u := &iam.CreateUserInput{
 		UserName: username,
@@ -59,6 +85,8 @@ func (i *IAM) CreateUser(username *string) (*iam.CreateUserOutput, error) {
 	return res, nil
 }
 
+// CreateUserPassword generates a random password with the securerandom lib
+// for the specified username
 func (i *IAM) CreateUserPassword(username *string) (*iam.CreateLoginProfileOutput, error) {
 	var res *iam.CreateLoginProfileOutput
 	var err error
@@ -80,7 +108,33 @@ func (i *IAM) CreateUserPassword(username *string) (*iam.CreateLoginProfileOutpu
 	return res, nil
 }
 
-func (i *IAM) AddUserGroups() {
-	*iam.AddUserToGroupInput
-	i.Iam.AddUserToGroup
+// AddUserGroups adds groups to a specified user
+func (i *IAM) AddUserGroups(username string, g *GroupConfig) (*iam.AddUserToGroupOutput, error) {
+	return nil, nil
+}
+
+// RoleByNameAndEnv returns a list of roles based off of environment and passed in role
+func RoleByNameAndEnv(g *GroupConfig) ([]string, error) {
+	setDefaultEnvRole(g)
+	filename, _ := filepath.Abs(groupsFileName)
+	file, err := ioutil.ReadFile(filename)
+
+	var envRoles EnvRoles
+	err = yaml.Unmarshal(file, &envRoles)
+	fmt.Println(envRoles)
+
+	if err != nil {
+		return nil, err
+	}
+	return []string{}, err
+}
+
+// setDefaultEnvRole sets default environment and roles if not set
+func setDefaultEnvRole(g *GroupConfig) {
+	if g.Env == "" {
+		g.Env = defaultEnv
+	}
+	if g.Role == "" {
+		g.Role = defaultRole
+	}
 }
