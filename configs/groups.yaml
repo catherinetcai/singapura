@@ -1,8 +1,9 @@
-groups:
-  preprod:
-    developer:
+preprod:
+  developer:
+    groups:
       - "Developers"
-    devops:
+  devops:
+    groups:
       - "devops"
       - "DevOps-NOC-Dynamo-Ec2"
       - "DevOps-NOC-ElasticCache-Route53"
@@ -13,3 +14,5 @@ groups:
       - "DevOps-NOC-CloudFormation-Cloudfront"
       - "Grindr-ADMIN-ALL-ACCESS-PLAN-fixed-ma-03052016"
       - "DevOps-SNS-SQS"
+prod:
+

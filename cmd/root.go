@@ -29,13 +29,10 @@ var profile string
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "singapura",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Singapura is an application that creates and deletes a user in AWS.",
+	Long: `createUser <user> creates a user, generates a password for them, and puts them into the default groups set in the groups.yaml
+	deleteUser <user> deletes the specified user in AWS
+	Pass the --profile <profile> flag in order to specify the profile in your ~/.aws/credentials file that you want to run Singapura with.`,
 	DisableAutoGenTag: true,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:

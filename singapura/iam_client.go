@@ -24,13 +24,30 @@ type GroupConfig struct {
 	Env  string
 }
 
-type EnvRoles struct {
-	//	Groups map[string]map[string][]string
-	Envs map[string]Env
+//type EnvRoles struct {
+//	//	Groups map[string]map[string][]string
+//	Envs map[string]Env
+//}
+
+type Environment struct {
+	Roles map[string]Role
 }
 
-type Env struct {
-	Roles map[string][]string
+type Role struct {
+	Groups []string `yaml:"groups"`
+}
+
+// UnmarshalYAML allows us to keep our custom type of YAML without having to name the groups in the Environment struct
+func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var roles map[string]Role
+	if err := unmarshal(&roles); err != nil {
+		fmt.Printf("unmarshaling in this environment struct")
+		if _, ok := err.(*yaml.TypeError); !ok {
+			return err
+		}
+	}
+	e.Roles = roles
+	return nil
 }
 
 const (
@@ -119,9 +136,8 @@ func RoleByNameAndEnv(g *GroupConfig) ([]string, error) {
 	filename, _ := filepath.Abs(groupsFileName)
 	file, err := ioutil.ReadFile(filename)
 
-	var envRoles EnvRoles
+	var envRoles map[string]Environment
 	err = yaml.Unmarshal(file, &envRoles)
-	fmt.Println(envRoles)
 
 	if err != nil {
 		return nil, err
