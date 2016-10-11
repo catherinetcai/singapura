@@ -25,12 +25,14 @@ import (
 
 var cfgFile string
 var profile string
+var role string
+var env string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "singapura",
 	Short: "Singapura is an application that creates and deletes a user in AWS.",
-	Long: `createUser <user> creates a user, generates a password for them, and puts them into the default groups set in the groups.yaml
+	Long: `CreateUser <user> creates a user, generates a password for them, and puts them into the default groups set in the groups.yaml
 	deleteUser <user> deletes the specified user in AWS
 	Pass the --profile <profile> flag in order to specify the profile in your ~/.aws/credentials file that you want to run Singapura with.`,
 	DisableAutoGenTag: true,
@@ -49,7 +51,9 @@ func Execute() {
 }
 
 func init() {
-	singapura.RoleByNameAndEnv(&singapura.GroupConfig{})
+	//Remove this, debug
+	singapura.GroupsByRoleAndEnv(&singapura.GroupConfig{})
+
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
@@ -63,7 +67,8 @@ func init() {
 
 	RootCmd.AddCommand(createUserCmd)
 	RootCmd.PersistentFlags().StringVar(&profile, "profile", "", "AWS profile to set credentials from your ~/.aws/credentials file")
-	//	createUserCmd.Flags().StringVar(&profile, "profile", "", "AWS profile to set credentials from your ~/.aws/credentials file")
+	createUserCmd.Flags().StringVar(&role, "role", "", "Role to apply groups to - see the config/groups.yaml file")
+	createUserCmd.Flags().StringVar(&env, "env", "", "Environment to apply groups to - see the config/groups.yaml file")
 }
 
 // initConfig reads in config file and ENV variables if set.

@@ -20,14 +20,10 @@ type IAM struct {
 }
 
 type GroupConfig struct {
-	Role string
-	Env  string
+	Role     string
+	Env      string
+	UserName string
 }
-
-//type EnvRoles struct {
-//	//	Groups map[string]map[string][]string
-//	Envs map[string]Env
-//}
 
 type Environment struct {
 	Roles map[string]Role
@@ -37,7 +33,15 @@ type Role struct {
 	Groups []string `yaml:"groups"`
 }
 
+const (
+	passwordLen    = 10
+	defaultEnv     = "preprod"
+	defaultRole    = "developer"
+	groupsFileName = "configs/groups.yaml"
+)
+
 // UnmarshalYAML allows us to keep our custom type of YAML without having to name the groups in the Environment struct
+// http://stackoverflow.com/questions/32147325/how-to-parse-yaml-with-dyanmic-key-in-golang
 func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var roles map[string]Role
 	if err := unmarshal(&roles); err != nil {
@@ -49,13 +53,6 @@ func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	e.Roles = roles
 	return nil
 }
-
-const (
-	passwordLen    = 10
-	defaultEnv     = "preprod"
-	defaultRole    = "developer"
-	groupsFileName = "configs/groups.yaml"
-)
 
 // IamInstance creates an instance of a Iam Client with the default ~/.aws/credentials
 func IamInstance(profile string) (*IAM, error) {
@@ -126,13 +123,49 @@ func (i *IAM) CreateUserPassword(username *string) (*iam.CreateLoginProfileOutpu
 }
 
 // AddUserGroups adds groups to a specified user
-func (i *IAM) AddUserGroups(username string, g *GroupConfig) (*iam.AddUserToGroupOutput, error) {
-	return nil, nil
+func (i *IAM) AddUserGroups(g *GroupConfig) ([]*iam.AddUserToGroupOutput, error) {
+	var outputs []*iam.AddUserToGroupOutput
+	groups, err := GroupsByRoleAndEnv(g)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, group := range groups {
+		var o *iam.AddUserToGroupOutput
+		o, err = i.Iam.AddUserToGroup(&iam.AddUserToGroupInput{
+			GroupName: aws.String(group),
+			UserName:  aws.String(g.UserName),
+		})
+		if err != nil {
+			fmt.Printf("Error adding user to group: %v\n", group)
+			continue
+		}
+		outputs = append(outputs, o)
+	}
+	return outputs, nil
 }
 
-// RoleByNameAndEnv returns a list of roles based off of environment and passed in role
-func RoleByNameAndEnv(g *GroupConfig) ([]string, error) {
+// GroupsByRoleAndEnv returns a list of groups based off of environment and passed in role
+func GroupsByRoleAndEnv(g *GroupConfig) ([]string, error) {
 	setDefaultEnvRole(g)
+	env, err := allGroups()
+	if err != nil {
+		return nil, err
+	}
+	roles, ok := env[g.Env]
+	if !ok {
+		return nil, fmt.Errorf("Unable to find any roles related to env: %v\n", g.Env)
+	}
+	var role Role
+	role, ok = roles.Roles[g.Role]
+	if !ok {
+		return nil, fmt.Errorf("Unable to find role: %v\n", g.Role)
+	}
+	return role.Groups, nil
+}
+
+// AllRoles returns a map keyed by Environment, and contains roles/groups that are keyed
+func allGroups() (map[string]Environment, error) {
 	filename, _ := filepath.Abs(groupsFileName)
 	file, err := ioutil.ReadFile(filename)
 
@@ -142,7 +175,8 @@ func RoleByNameAndEnv(g *GroupConfig) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []string{}, err
+
+	return envRoles, nil
 }
 
 // setDefaultEnvRole sets default environment and roles if not set

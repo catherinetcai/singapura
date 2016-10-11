@@ -11,7 +11,9 @@ import (
 var createUserCmd = &cobra.Command{
 	Use:   "CreateUser",
 	Short: "Create a new AWS User",
-	Long:  `Create a new AWS User - username`,
+	Long: `Create a new AWS User.
+	Usage: CreateUser --profile <profile> --env <environment> --role <role>.
+	Defaults to preprod and developer for role if unspecified`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var i *singapura.IAM
 		var err error
@@ -31,8 +33,21 @@ var createUserCmd = &cobra.Command{
 			fmt.Printf("Error creating user: %v\n", err)
 			return
 		}
+
+		g := &singapura.GroupConfig{
+			Role:     role,
+			Env:      env,
+			UserName: username,
+		}
+		var groupRes []*iam.AddUserToGroupOutput
+		groupRes, err = i.AddUserGroups(g)
+		if err != nil {
+			fmt.Printf("Error adding user to groups: %v\n", err)
+			return
+		}
 		fmt.Printf("User res: %v\n", userRes)
 		fmt.Printf("Login res: %v\n", loginRes)
+		fmt.Printf("Group res: %v\n", groupRes)
 	},
 }
 
