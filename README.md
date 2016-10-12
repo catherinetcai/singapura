@@ -34,6 +34,8 @@ This will create a username, generate a password for them, generate an access ke
 There's flags to allow you to pass in certain options:
 
 ```
--p, --p - Allows you to specify the AWS profile to use from your ~/.aws/credentials file
--e, --env - Allows you to specify the environment in your config/groups.yaml
+-p, --p - string - Specify the AWS profile to use from your ~/.aws/credentials file
+-e, --env - string - Specify the environment in your config/groups.yaml. Defaults to preprod
+-r, --role - string - Specify the role to apply to groups. Defaults to developer
+-k, --key - bool - Specify whether or not access keys should be generated for the user. Defaults to true.
 ```
