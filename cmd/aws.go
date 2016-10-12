@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -11,29 +12,69 @@ import (
 var createUserCmd = &cobra.Command{
 	Use:   "CreateUser",
 	Short: "Create a new AWS User",
-	Long:  `Create a new AWS User - username`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Long: `Create a new AWS User.
+	Usage: CreateUser --profile <profile> --env <environment> --role <role>.
+	Defaults to preprod and developer for role if unspecified`,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		var i *singapura.IAM
 		var err error
 		username := args[0]
 		if username == "" {
-			fmt.Println("Provide a username to create account.")
-			return
+			return errors.New("Provide a username to create account.")
 		}
-		i, err = singapura.IamInstance(profile)
 
-		var userRes *iam.CreateUserOutput
-		userRes, err = i.CreateUser(&username)
-
-		var loginRes *iam.CreateLoginProfileOutput
-		loginRes, err = i.CreateUserPassword(&username)
+		s := createConfig(username)
+		i, err = singapura.IamInstance(s)
 		if err != nil {
-			fmt.Printf("Error creating user: %v\n", err)
-			return
+			return errors.New("Error connecting to AWS with the profile specified.")
 		}
-		fmt.Printf("User res: %v\n", userRes)
-		fmt.Printf("Login res: %v\n", loginRes)
+
+		fmt.Println("Creating user...")
+		var userRes *iam.CreateUserOutput
+		userRes, err = i.CreateUser(s)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Generating password...")
+		var loginRes string
+		loginRes, err = i.CreateUserPassword(s)
+		if err != nil {
+			return err
+		}
+
+		var accessRes *iam.CreateAccessKeyOutput
+		if accesskey {
+			fmt.Println("Creating access keys...")
+			accessRes, err = i.CreateAccessKey(s)
+			if err != nil {
+				return err
+			}
+		}
+
+		fmt.Println("Adding user to groups...")
+		var groupRes []string
+		groupRes, err = i.AddUserGroups(s)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("User Info: %v\n", userRes)
+		fmt.Printf("Password: %v\n", loginRes)
+		fmt.Printf("Access key: %v\n", accessRes)
+		fmt.Printf("Groups: %v\n", groupRes)
+		return nil
 	},
+}
+
+// createConfig creates and populates the struct for Singapura
+func createConfig(username string) *singapura.Singapura {
+	return &singapura.Singapura{
+		Profile:  profile,
+		Env:      env,
+		Role:     role,
+		UserName: username,
+	}
 }
 
 var deleteUserCmd = &cobra.Command{

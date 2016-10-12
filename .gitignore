@@ -2,3 +2,5 @@
 *.swp
 /vendor/**
 /Godeps/**
+
+*.iml
