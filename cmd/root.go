@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/grindrllc/singapura/singapura"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -27,6 +26,7 @@ var cfgFile string
 var profile string
 var role string
 var env string
+var accesskey bool
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -51,9 +51,6 @@ func Execute() {
 }
 
 func init() {
-	//Remove this, debug
-	singapura.GroupsByRoleAndEnv(&singapura.GroupConfig{})
-
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
@@ -66,9 +63,10 @@ func init() {
 	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	RootCmd.AddCommand(createUserCmd)
-	RootCmd.PersistentFlags().StringVar(&profile, "profile", "", "AWS profile to set credentials from your ~/.aws/credentials file")
-	createUserCmd.Flags().StringVar(&role, "role", "", "Role to apply groups to - see the config/groups.yaml file")
-	createUserCmd.Flags().StringVar(&env, "env", "", "Environment to apply groups to - see the config/groups.yaml file")
+	RootCmd.PersistentFlags().StringVarP(&profile, "profile", "p", "", "AWS profile to set credentials from your ~/.aws/credentials file")
+	createUserCmd.Flags().StringVarP(&role, "role", "r", "", "Role to apply groups to - see the config/groups.yaml file")
+	createUserCmd.Flags().StringVarP(&env, "env", "e", "", "Environment to apply groups to - see the config/groups.yaml file")
+	createUserCmd.Flags().BoolVarP(&accesskey, "key", "k", true, "Toggle for whether or not access keys should be generated for this user. Defaults to true")
 }
 
 // initConfig reads in config file and ENV variables if set.

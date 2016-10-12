@@ -19,10 +19,12 @@ type IAM struct {
 	sess *session.Session
 }
 
-type GroupConfig struct {
+// The Singapura struct keeps track of all the user's input flags
+type Singapura struct {
 	Role     string
 	Env      string
 	UserName string
+	Profile  string
 }
 
 type Environment struct {
@@ -55,8 +57,8 @@ func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // IamInstance creates an instance of a Iam Client with the default ~/.aws/credentials
-func IamInstance(profile string) (*IAM, error) {
-	sess, err := awsSession(profile)
+func IamInstance(s *Singapura) (*IAM, error) {
+	sess, err := awsSession(s.Profile)
 	if err != nil {
 		return nil, err
 	}
@@ -88,11 +90,10 @@ func awsSession(profile string) (*session.Session, error) {
 }
 
 // CreateUser creates a user with the specified username
-func (i *IAM) CreateUser(username *string) (*iam.CreateUserOutput, error) {
-	u := &iam.CreateUserInput{
-		UserName: username,
-	}
-	res, err := i.Iam.CreateUser(u)
+func (i *IAM) CreateUser(s *Singapura) (*iam.CreateUserOutput, error) {
+	res, err := i.Iam.CreateUser(&iam.CreateUserInput{
+		UserName: aws.String(s.UserName),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -101,65 +102,74 @@ func (i *IAM) CreateUser(username *string) (*iam.CreateUserOutput, error) {
 
 // CreateUserPassword generates a random password with the securerandom lib
 // for the specified username
-func (i *IAM) CreateUserPassword(username *string) (*iam.CreateLoginProfileOutput, error) {
-	var res *iam.CreateLoginProfileOutput
+func (i *IAM) CreateUserPassword(s *Singapura) (string, error) {
 	var err error
 	var password string
 	password, err = securerandom.Base64(passwordLen, true)
-	fmt.Printf("Password: %v\n", password)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	p := &iam.CreateLoginProfileInput{
-		UserName:              username,
+
+	_, err = i.Iam.CreateLoginProfile(&iam.CreateLoginProfileInput{
+		UserName:              aws.String(s.UserName),
 		Password:              aws.String(password),
 		PasswordResetRequired: aws.Bool(true),
-	}
-	res, err = i.Iam.CreateLoginProfile(p)
+	})
+
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return res, nil
+	return password, nil
 }
 
-// AddUserGroups adds groups to a specified user
-func (i *IAM) AddUserGroups(g *GroupConfig) ([]*iam.AddUserToGroupOutput, error) {
-	var outputs []*iam.AddUserToGroupOutput
-	groups, err := GroupsByRoleAndEnv(g)
+// AddUserGroups adds groups to a specified user based off the flags that are passed in
+func (i *IAM) AddUserGroups(s *Singapura) ([]string, error) {
+	var outputs []string
+	groups, err := GroupsByRoleAndEnv(s)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, group := range groups {
-		var o *iam.AddUserToGroupOutput
-		o, err = i.Iam.AddUserToGroup(&iam.AddUserToGroupInput{
+		_, err = i.Iam.AddUserToGroup(&iam.AddUserToGroupInput{
 			GroupName: aws.String(group),
-			UserName:  aws.String(g.UserName),
+			UserName:  aws.String(s.UserName),
 		})
 		if err != nil {
 			fmt.Printf("Error adding user to group: %v\n", group)
 			continue
 		}
-		outputs = append(outputs, o)
+		outputs = append(outputs, group)
 	}
 	return outputs, nil
 }
 
+// CreateAccessKey generates access keys for a user
+func (i *IAM) CreateAccessKey(s *Singapura) (*iam.CreateAccessKeyOutput, error) {
+	k, err := i.Iam.CreateAccessKey(&iam.CreateAccessKeyInput{
+		UserName: aws.String(s.UserName),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return k, nil
+}
+
 // GroupsByRoleAndEnv returns a list of groups based off of environment and passed in role
-func GroupsByRoleAndEnv(g *GroupConfig) ([]string, error) {
-	setDefaultEnvRole(g)
+func GroupsByRoleAndEnv(s *Singapura) ([]string, error) {
+	setDefaultEnvRole(s)
 	env, err := allGroups()
 	if err != nil {
 		return nil, err
 	}
-	roles, ok := env[g.Env]
+	roles, ok := env[s.Env]
 	if !ok {
-		return nil, fmt.Errorf("Unable to find any roles related to env: %v\n", g.Env)
+		return nil, fmt.Errorf("Unable to find any roles related to env: %v\n", s.Env)
 	}
 	var role Role
-	role, ok = roles.Roles[g.Role]
+	role, ok = roles.Roles[s.Role]
 	if !ok {
-		return nil, fmt.Errorf("Unable to find role: %v\n", g.Role)
+		return nil, fmt.Errorf("Unable to find role: %v\n", s.Role)
 	}
 	return role.Groups, nil
 }
@@ -180,7 +190,7 @@ func allGroups() (map[string]Environment, error) {
 }
 
 // setDefaultEnvRole sets default environment and roles if not set
-func setDefaultEnvRole(g *GroupConfig) {
+func setDefaultEnvRole(g *Singapura) {
 	if g.Env == "" {
 		g.Env = defaultEnv
 	}
