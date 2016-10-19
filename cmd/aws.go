@@ -18,6 +18,9 @@ var createUserCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var i *singapura.IAM
 		var err error
+		if len(args) <= 0 {
+			return errors.New("Provide a username to create account.")
+		}
 		username := args[0]
 		if username == "" {
 			return errors.New("Provide a username to create account.")
